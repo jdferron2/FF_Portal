@@ -85,7 +85,7 @@ public class LeagueInfoManager {
 		return null;
 	}
 
-	public void undoLastDraftPick(){
+	public synchronized void undoLastDraftPick(){
 		int currentPick = league.getCurrentPick();
 		if(currentPick == 1) return;
 		int pickToBeUndone = currentPick-1;
@@ -111,7 +111,7 @@ public class LeagueInfoManager {
 		//return lookupPlayerByDraftSlot.get(draftSlot);
 	}
 
-	public void draftPlayer(Player player){
+	public synchronized void draftPlayer(Player player){
 		int pick = league.getCurrentPick();
 		FantasyTeam draftedByTeam = getTeamOnTheClockFromPick(pick);
 		player.setOwner(draftedByTeam.getOwner());
