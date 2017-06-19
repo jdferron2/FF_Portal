@@ -1,21 +1,22 @@
 package com.jdf.ff_portal.utils;
 
+import java.sql.Timestamp;
 import java.util.HashMap;
 
-import com.jdf.ff_portal.bindings.FantasyLeague;
-import com.jdf.ff_portal.bindings.FantasyTeam;
-import com.jdf.ff_portal.bindings.Player;
-import com.jdf.ff_portal.bindings.Players;
+import com.jdf.ff_portal.backend.PlayerService;
+import com.jdf.ff_portal.backend.SbfDraftService;
+import com.jdf.ff_portal.backend.SbfTeamService;
+import com.jdf.ff_portal.backend.data.Player;
+import com.jdf.ff_portal.backend.data.SbfDraftRecord;
+import com.jdf.ff_portal.backend.data.SbfTeam;
+import com.vaadin.ui.UI;
+
 
 public class LeagueInfoManager {
 	private static LeagueInfoManager INSTANCE = null;
-	private static final String LEAGUE_FILE_NAME = "leagueInfo.xml";
-	private static final String PLAYERS_FILE_NAME = "players.xml";
 	private static final int	NUMBER_OF_TEAMS = 12;
 
 	//private HashMap<Integer, Player> lookupPlayerByDraftSlot;
-	private FantasyLeague league;
-	private Players players;
 	public static LeagueInfoManager getInstance() {
 		if (INSTANCE == null) {
 			INSTANCE = new LeagueInfoManager();
@@ -29,32 +30,39 @@ public class LeagueInfoManager {
 	}
 
 	private void initialize(){
-		RestAPIUtils restUtils = RestAPIUtils.getInstance();
-		league = restUtils.unMarshalFantasyTeams(LEAGUE_FILE_NAME);
-		players = restUtils.unMarshalPlayerList(PLAYERS_FILE_NAME);
-
-		for(FantasyTeam currentTeam : league.getTeams()){
-			for(Player currentDraftedPlayer : currentTeam.getPlayers()){
-				Player syncPlayer = players.getPlayerByRank(currentDraftedPlayer.getCurrentRank());
-				currentDraftedPlayer = syncPlayer;
-			}
-		}
+//		RestAPIUtils restUtils = RestAPIUtils.getInstance();
+//		league = restUtils.unMarshalFantasyTeams(LEAGUE_FILE_NAME);
+//		players = restUtils.unMarshalPlayerList(PLAYERS_FILE_NAME);
+//
+//		for(FantasyTeam currentTeam : league.getTeams()){
+//			for(Player currentDraftedPlayer : currentTeam.getPlayers()){
+//				Player syncPlayer = players.getPlayerByRank(currentDraftedPlayer.getCurrentRank());
+//				currentDraftedPlayer = syncPlayer;
+//			}
+//		}
 	}
 
-	public void saveLeagueInfo(){
-		RestAPIUtils.getInstance().marshalFantasyTeams(league, LEAGUE_FILE_NAME);
-		RestAPIUtils.getInstance().marshalPlayerList(players, PLAYERS_FILE_NAME);
-	}
+//	public void saveLeagueInfo(){
+////		RestAPIUtils.getInstance().marshalFantasyTeams(league, LEAGUE_FILE_NAME);
+////		RestAPIUtils.getInstance().marshalPlayerList(players, PLAYERS_FILE_NAME);
+//	}
+//
+//	public FantasyLeague getLeague(){
+//		return league;
+//	}
+//
+//	public Players getPlayers(){
+//		return players;
+//	}
 
-	public FantasyLeague getLeague(){
-		return league;
+	public synchronized int getCurrentPick(){
+		if (SbfDraftService.getInstance().getAllSbfDraftRecords().isEmpty()) return 1;
+		return SbfDraftService.getInstance().getAllSbfDraftRecords().stream().max(
+				(s1,s2)->Integer.compare(s1.getSlotDrafted(), s2.getSlotDrafted())
+				).get().getSlotDrafted() + 1;
 	}
-
-	public Players getPlayers(){
-		return players;
-	}
-
-	public int getRoundFromPick(int pick){
+	public synchronized int getRound(){
+		int pick = getCurrentPick();
 		int round = 1;
 		if (pick%NUMBER_OF_TEAMS ==0){
 			round = pick/NUMBER_OF_TEAMS;
@@ -64,60 +72,68 @@ public class LeagueInfoManager {
 		return round;
 	}
 
-	public int getPickInRoundFromPick(int pick){
+	public synchronized int getPickInRound(){
+		int pick = getCurrentPick();
 		if (pick <= NUMBER_OF_TEAMS) return pick;
 		if (pick % NUMBER_OF_TEAMS == 0) return NUMBER_OF_TEAMS;
 		return (pick % NUMBER_OF_TEAMS) ;
 		//return 0;
 	}
 
-	public FantasyTeam getTeamOnTheClockFromPick(int pick){
-		int round = getRoundFromPick(pick);
+	public synchronized SbfTeam getTeamOnTheClock(){
+		int round = getRound();
 		int startingDraftSlot;
 		if (round % 2 == 0){ //even Round
-			startingDraftSlot = (NUMBER_OF_TEAMS+1) - getPickInRoundFromPick(pick);
+			startingDraftSlot = (NUMBER_OF_TEAMS+1) - getPickInRound();
 		}else{
-			startingDraftSlot = getPickInRoundFromPick(pick);
+			startingDraftSlot = getPickInRound();
 		}
-		for (FantasyTeam currentTeam : league.getTeams()){
-			if (currentTeam.getDraftPosition() == startingDraftSlot) return currentTeam;
+		for (SbfTeam currentTeam : SbfTeamService.getInstance().getAllSbfTeams()){
+			if (currentTeam.getDraftSlot() == startingDraftSlot) return currentTeam;
 		}
 		return null;
 	}
 
 	public synchronized void undoLastDraftPick(){
-		int currentPick = league.getCurrentPick();
-		if(currentPick == 1) return;
-		int pickToBeUndone = currentPick-1;
-		Player lastDraftedPlayer = lookupPlayerByDraftSlot(pickToBeUndone);
-		if (lastDraftedPlayer == null) return;
-		lastDraftedPlayer.setOwner(null);
-		lastDraftedPlayer.setDraftedSlot(0);
-		league.setCurrentPick(pickToBeUndone);
-		//league.setPickInRound(getPickInRoundFromPick(pickToBeUndone));
-		//league.setWhosPick(getTeamOnTheClockFromPick(pickToBeUndone).getDraftPosition());
-	}
-
-	public Player lookupPlayerByDraftSlot(int draftSlot){
-		//if (lookupPlayerByDraftSlot == null){
-		//	lookupPlayerByDraftSlot = new HashMap<Integer,Player>();
-		for(Player p : players.getPlayers()){
-			//lookupPlayerByDraftSlot.put(p.getDraftedSlot(), p);
-			if (p.getDraftedSlot() == draftSlot) return p;
-		}
-
-		return null;
-		//}
-		//return lookupPlayerByDraftSlot.get(draftSlot);
+		if (SbfDraftService.getInstance().getAllSbfDraftRecords().isEmpty()) return;
+		SbfDraftRecord lastDraftedPlayer = 
+				SbfDraftService.getInstance().getAllSbfDraftRecords().stream().max(
+						(s1,s2)->Integer.compare(s1.getSlotDrafted(), s2.getSlotDrafted())
+						).get();
+		SbfDraftService.getInstance().deleteDraftRecord(lastDraftedPlayer);
 	}
 
 	public synchronized void draftPlayer(Player player){
-		int pick = league.getCurrentPick();
-		FantasyTeam draftedByTeam = getTeamOnTheClockFromPick(pick);
-		player.setOwner(draftedByTeam.getOwner());
-		draftedByTeam.addPlayer(player);
-		player.setDraftedSlot(pick);
-		pick++;		
-		league.setCurrentPick(pick);
+		if (SbfDraftService.getInstance().getSbfDraftRecordByPlayerId(player.getPlayerId()) == null){
+			SbfDraftRecord draftRecord = new SbfDraftRecord(
+					(Integer) UI.getCurrent().getSession().getAttribute(SessionAttributes.LEAGUE_ID),
+					getTeamOnTheClock().getSbfId(),player.getPlayerId(),
+					getCurrentPick(),new Timestamp(System.currentTimeMillis()));
+			SbfDraftService.getInstance().insertDraftRecord(draftRecord);
+		}
+	}
+	
+	public synchronized void movePlayerUp(Player player){
+		int newRank = player.getSbfRank().getRank() - 1;
+		if (newRank < 1) return;
+		Player existingPlayer;
+		if ((existingPlayer=PlayerService.getInstance().getPlayerBySbfRank(player.getSbfRank().getRank()-1)) != null){
+			existingPlayer.getSbfRank().setRank(newRank+1);
+			existingPlayer.getSbfRank().setFlagForUpdate(true);
+		}
+		player.getSbfRank().setRank(newRank);
+		player.getSbfRank().setFlagForUpdate(true);
+	}
+
+	public synchronized void movePlayerDown(Player player){
+		int newRank = player.getSbfRank().getRank() + 1;
+		if (newRank < 1) return;
+		Player existingPlayer;
+		if ((existingPlayer=PlayerService.getInstance().getPlayerBySbfRank(player.getSbfRank().getRank()+1)) != null){
+			existingPlayer.getSbfRank().setRank(newRank-1);
+			player.getSbfRank().setRank(newRank);
+			existingPlayer.getSbfRank().setFlagForUpdate(true);
+			player.getSbfRank().setFlagForUpdate(true);
+		}
 	}
 }

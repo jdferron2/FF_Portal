@@ -1,20 +1,19 @@
 package com.jdf.ff_portal.views;
 
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
-import com.jdf.ff_portal.bindings.FantasyLeague;
-import com.jdf.ff_portal.bindings.FantasyTeam;
-import com.jdf.ff_portal.bindings.Player;
-import com.jdf.ff_portal.bindings.Players;
+import com.jdf.ff_portal.backend.PlayerService;
+import com.jdf.ff_portal.backend.SbfDraftService;
+import com.jdf.ff_portal.backend.SbfTeamService;
+import com.jdf.ff_portal.backend.data.Player;
+import com.jdf.ff_portal.backend.data.SbfDraftRecord;
+import com.jdf.ff_portal.backend.data.SbfTeam;
 import com.jdf.ff_portal.utils.LeagueInfoManager;
 import com.vaadin.data.provider.ListDataProvider;
 import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener.ViewChangeEvent;
-import com.vaadin.shared.data.sort.SortDirection;
 import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
 import com.vaadin.ui.Grid;
@@ -32,20 +31,21 @@ import com.vaadin.ui.themes.ValoTheme;
 
 @SuppressWarnings("serial")
 public class DraftDayView extends HorizontalLayout implements View {
-	private FantasyLeague SBF;
+	//private FantasyLeague SBF;
 	private Label onTheClock =  new Label();
 	//private int currentRound = 1;
-	private HashMap<Integer, FantasyTeam> draftOrder = new HashMap<Integer, FantasyTeam>();
+	//private HashMap<Integer, FantasyTeam> draftOrder = new HashMap<Integer, FantasyTeam>();
 	private Grid<Player> availableGrid;
-	private Grid<Player> draftedGrid;
+	private Grid<SbfDraftRecord> draftedGrid;
 	private ListDataProvider<Player> playersDataProvider;
-	private ListDataProvider<Player> draftedPlayersDataProvider;
-	Players playerList;
-	private LeagueInfoManager leagueInfoManager;
+	private ListDataProvider<SbfDraftRecord> draftedPlayersDataProvider;
+	List<Player> playerList;
+	//private LeagueInfoManager leagueInfoManager;
 
 	private String availPlayerNameFilterValue="";
 	private String availPositionFilterValue="";
 	private String availIsDraftedFilterValue="Available";
+	private boolean viewBuilt = false;
 
 	private final Command filterCommand = new Command() {
 		@Override
@@ -66,14 +66,15 @@ public class DraftDayView extends HorizontalLayout implements View {
 		}};
 
 		public DraftDayView(){
-			leagueInfoManager = LeagueInfoManager.getInstance();
-			SBF = leagueInfoManager.getLeague();
-			playerList = leagueInfoManager.getPlayers();
 
-			for(FantasyTeam currentTeam : SBF.getTeams()){
-				draftOrder.put(currentTeam.getDraftPosition(), currentTeam);
-			}
-			//int currentRound = leagueInfoManager.getRoundFromPick(SBF.getCurrentPick());
+		}
+
+		public void enter(ViewChangeEvent event) {
+			if (!viewBuilt) buildView();
+		}
+
+		protected void buildView(){
+			playerList =  PlayerService.getInstance().getAllPlayers();
 			onTheClock.setCaptionAsHtml(true);
 			setOnTheClockCaption();
 			setSizeFull();
@@ -83,20 +84,18 @@ public class DraftDayView extends HorizontalLayout implements View {
 			layout.setMargin(false);
 			layout.setSizeFull();
 			layout.setSpacing(false);
-			
+
 			final HorizontalLayout bannerLayout = new HorizontalLayout();
 			bannerLayout.setSizeFull();
 
 			final HorizontalLayout gridsLayout = new HorizontalLayout();
 			gridsLayout.setSizeFull();
 
-			List<Player> players = playerList.getPlayers();
-
-			availableGrid = configureAvailableGrid(players);
+			availableGrid = configureAvailableGrid(playerList);
 			availableGrid.setSizeFull();
 
-			draftedGrid = configureDraftedGrid(players);
-			
+			draftedGrid = configureDraftedGrid();
+
 			Button undoButton = new Button("Undo");
 			undoButton.addClickListener(new Button.ClickListener()
 			{ @Override public void buttonClick(Button.ClickEvent clickEvent)
@@ -115,24 +114,21 @@ public class DraftDayView extends HorizontalLayout implements View {
 			layout.setExpandRatio(gridsLayout, 1);
 			addComponent(layout);
 		}
-
-		public void enter(ViewChangeEvent event) {
-		}
-
 		@SuppressWarnings("unchecked")
-		public Grid<Player> configureDraftedGrid(List<Player> players){
-			Grid<Player> draftedGrid = new Grid<>();
-			draftedGrid.setItems(players);
+		public Grid<SbfDraftRecord> configureDraftedGrid(){
+			Grid<SbfDraftRecord> draftedGrid = new Grid<>();
+			draftedGrid.setItems(SbfDraftService.getInstance().getAllSbfDraftRecords());
 			draftedGrid.setSizeFull();
 			draftedGrid.setSelectionMode(SelectionMode.SINGLE);
-			draftedGrid.addColumn(Player::getPosition).setCaption("Position");
-			draftedGrid.addColumn(Player::getDisplayName).setCaption("Name");
-			draftedGrid.addColumn(Player::getOwner).setCaption("Drafted By");
-			draftedGrid.addColumn(Player::getDraftedSlot).setCaption("Drafted");
-			draftedPlayersDataProvider = (ListDataProvider<Player>) draftedGrid.getDataProvider();
-			draftedPlayersDataProvider.setFilter(Player::getOwner, a -> a!=null);
+			draftedGrid.addColumn(s->PlayerService.getInstance().getPlayerById(s.getPlayerId()).getDisplayName())
+			.setCaption("Player Name");
+			draftedGrid.addColumn(s->PlayerService.getInstance().getPlayerById(s.getPlayerId()).getPosition())
+			.setCaption("Position");
+			draftedGrid.addColumn(s->SbfTeamService.getInstance().getSbfTeamBySbfId(s.getSbfId()).getOwnerName())
+			.setCaption("Drafted By");
+			draftedGrid.addColumn(SbfDraftRecord::getSlotDrafted).setCaption("Drafted");
+			draftedPlayersDataProvider = (ListDataProvider<SbfDraftRecord>) draftedGrid.getDataProvider();
 			return draftedGrid;
-
 		}
 
 		@SuppressWarnings("unchecked")
@@ -142,7 +138,7 @@ public class DraftDayView extends HorizontalLayout implements View {
 
 			availableGrid.setSizeFull();
 			availableGrid.setSelectionMode(SelectionMode.SINGLE);
-			availableGrid.addColumn(Player::getCurrentRank).setCaption("My Rank");
+			availableGrid.addColumn(p->p.getSbfRank().getRank()).setCaption("My Rank");
 			availableGrid.addColumn(Player::getPosition).setCaption("Position").setId("PositionColumn");
 			availableGrid.addColumn(Player::getDisplayName).setCaption("Name").setId("PlayerNameColumn");
 			availableGrid.addColumn(Player::getTeam).setCaption("Team");
@@ -150,7 +146,7 @@ public class DraftDayView extends HorizontalLayout implements View {
 
 			playersDataProvider = (ListDataProvider<Player>) availableGrid.getDataProvider();
 
-			playersDataProvider.setFilter(Player::getThisPlayer, a -> availableGridFilter(a));
+			playersDataProvider.setFilter(p->p, p -> availableGridFilter(p));
 			HeaderRow filterRow = availableGrid.appendHeaderRow();
 
 			TextField availPlayerNameFilter = getTextFilter();
@@ -158,9 +154,9 @@ public class DraftDayView extends HorizontalLayout implements View {
 				setAvailPlayerNameFilterValue(event.getValue());
 				playersDataProvider.refreshAll();
 			});
-			
+
 			availableGrid.getColumn("DraftedColumn").setStyleGenerator(p -> {
-				if (p.getOwner() != null) {
+				if (SbfDraftService.getInstance().getSbfDraftRecordByPlayerId(p.getPlayerId())!= null) {
 					return "hidden" ;
 				}else{
 					return null;
@@ -187,9 +183,13 @@ public class DraftDayView extends HorizontalLayout implements View {
 			}
 			//are they drafted?
 			if (availIsDraftedFilterValue.equals("Available")){
-				if (player.getDraftedSlot() > 0) return false;
+				if (SbfDraftService.getInstance().getSbfDraftRecordByPlayerId(player.getPlayerId()) != null) {
+					return false;
+				}
 			}else if (availIsDraftedFilterValue.equals("Drafted")){
-				if (player.getDraftedSlot() == 0) return false;
+				if (SbfDraftService.getInstance().getSbfDraftRecordByPlayerId(player.getPlayerId()) == null) {
+					return false;
+				}
 			}
 
 			//player position
@@ -199,24 +199,24 @@ public class DraftDayView extends HorizontalLayout implements View {
 			return true;
 		}
 
-		public void removeNonActivePlayers(List<Player> players){//just for when I import a new list and want to get rid of them.
-			int rank = 1;
-			List<Player> nonActivePlayers = new ArrayList<Player>();
-			for (Player currentPlayer : players){
-				if (currentPlayer.getActive()==1){
-					currentPlayer.setCurrentRank(rank);
-					rank++;
-				}
-				else
-				{
-					nonActivePlayers.add(currentPlayer);
-				}
-			}
-			for (Player currentPlayer : nonActivePlayers){
-				players.remove(currentPlayer);
-			}
-
-		}
+		//		public void removeNonActivePlayers(List<Player> players){//just for when I import a new list and want to get rid of them.
+		//			int rank = 1;
+		//			List<Player> nonActivePlayers = new ArrayList<Player>();
+		//			for (Player currentPlayer : players){
+		//				if (currentPlayer.getActive()==1){
+		//					currentPlayer.setCurrentRank(rank);
+		//					rank++;
+		//				}
+		//				else
+		//				{
+		//					nonActivePlayers.add(currentPlayer);
+		//				}
+		//			}
+		//			for (Player currentPlayer : nonActivePlayers){
+		//				players.remove(currentPlayer);
+		//			}
+		//
+		//		}
 
 		public void setAvailPlayerNameFilterValue(String name){
 			this.availPlayerNameFilterValue = name.toLowerCase();
@@ -275,19 +275,19 @@ public class DraftDayView extends HorizontalLayout implements View {
 			ButtonRenderer<Object> test = new ButtonRenderer<Object>();
 			test.addClickListener(clickEvent -> {
 				Player selectedPlayer = (Player)clickEvent.getItem();
-				leagueInfoManager.draftPlayer(selectedPlayer);
+				LeagueInfoManager.getInstance().draftPlayer(selectedPlayer);
 				availableGrid.getDataProvider().refreshAll();
 				draftedGrid.getDataProvider().refreshAll();
-				
+
 				setOnTheClockCaption();
 			});
 			return test;
 		}
-		
+
 		public void setOnTheClockCaption(){
-			String teamOnTheClock = leagueInfoManager.getTeamOnTheClockFromPick(SBF.getCurrentPick()).getOwner();
-			int round = leagueInfoManager.getRoundFromPick(SBF.getCurrentPick());
-			int pickInRound =leagueInfoManager.getPickInRoundFromPick(SBF.getCurrentPick());
+			String teamOnTheClock = LeagueInfoManager.getInstance().getTeamOnTheClock().getOwnerName();
+			int round = LeagueInfoManager.getInstance().getRound();
+			int pickInRound =LeagueInfoManager.getInstance().getPickInRound();
 			onTheClock.setCaption("<h2>On The Clock: " + teamOnTheClock + 
 					"<br/>Round " + round + ", pick " + pickInRound + "</h2>");
 		}
