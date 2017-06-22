@@ -21,9 +21,9 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.jdom.input.SAXBuilder;
 
+import com.jdf.ff_portal.backend.data.DraftRankings;
+import com.jdf.ff_portal.backend.data.Players;
 import com.jdf.ff_portal.bindings.FantasyLeague;
-import com.jdf.ff_portal.bindings.Player;
-import com.jdf.ff_portal.bindings.Players;
 
 
 public class RestAPIUtils {
@@ -34,7 +34,8 @@ public class RestAPIUtils {
 
 
 	private enum Operation {
-		QUERY_PLAYERS(getApiUriBuilder().path("service/{service}/xml/" + KEY));
+		QUERY_PLAYERS(getApiUriBuilder().path("service/{service}/xml/" + KEY)),
+		QUERY_RANKS(getApiUriBuilder().path("service/{service}/xml/" + KEY + "/{ppr}/"));
 
 		private final UriBuilder builder;
 
@@ -97,6 +98,43 @@ public class RestAPIUtils {
 			e.printStackTrace();
 		}
 		return players;
+
+	}
+	
+	public DraftRankings invokeQueryRanks() {
+
+		//m_logger.info(String.format("Adding permissions to workbook '%s'.", workbookId));
+
+		String url = Operation.QUERY_RANKS.getUrl("draft-rankings","1");
+		DraftRankings ranks = new DraftRankings();
+		try {
+			HttpGet getStubMethod = new HttpGet(url);
+			HttpResponse getStubResponse = client.execute(getStubMethod);
+
+			int getStubStatusCode = getStubResponse.getStatusLine()
+					.getStatusCode();
+			if (getStubStatusCode < 200 || getStubStatusCode >= 300) {
+				// Handle non-2xx status code
+				return null;
+			}
+			String responseBody = EntityUtils.toString(getStubResponse.getEntity());
+
+			JAXBContext jaxbContext;
+			org.jdom.input.SAXBuilder saxBuilder = new SAXBuilder();
+
+			jaxbContext = JAXBContext.newInstance(DraftRankings.class);
+			Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller(); 
+
+			StringReader reader = new StringReader(responseBody);
+			ranks= jaxbUnmarshaller.unmarshal(new StreamSource(reader), DraftRankings.class).getValue();
+		} catch (JAXBException e) {
+			e.printStackTrace();
+		} catch (ParseException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return ranks;
 
 	}
 

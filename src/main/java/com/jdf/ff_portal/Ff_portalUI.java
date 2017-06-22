@@ -3,6 +3,7 @@ package com.jdf.ff_portal;
 import javax.servlet.annotation.WebServlet;
 import com.jdf.ff_portal.backend.PlayerService;
 import com.jdf.ff_portal.utils.SessionAttributes;
+import com.jdf.ff_portal.views.AdminView;
 import com.jdf.ff_portal.views.CheatSheetView;
 import com.jdf.ff_portal.views.DraftDayView;
 import com.jdf.ff_portal.views.LoginView;
@@ -46,8 +47,8 @@ public class Ff_portalUI extends UI {
 	@Override
 	protected void init(VaadinRequest request) {
 		setSizeFull();
-	//	getSession().setAttribute(SessionAttributes.USER_NAME, "Jeff");
-	//	getSession().setAttribute(SessionAttributes.LEAGUE_ID, 1);
+		getSession().setAttribute(SessionAttributes.USER_NAME, "Jeff");
+		getSession().setAttribute(SessionAttributes.LEAGUE_ID, 1);
 		PlayerService.getInstance().getAllPlayers();
 		CheatSheetView cheatSheetView =  new CheatSheetView();
 		setContent(rootLayout);
@@ -59,6 +60,7 @@ public class Ff_portalUI extends UI {
 		MenuBar menu = new MenuBar();
 		menu.addItem("Cheatsheet", menuCommand);
 		menu.addItem("Draft Day", menuCommand);
+		menu.addItem(AdminView.NAME, menuCommand);
 		
 		Button logout = new Button("Logout");
 		logout.addClickListener(new ClickListener() {
@@ -80,6 +82,7 @@ public class Ff_portalUI extends UI {
 		navigator.addView("", cheatSheetView);
 		navigator.addView("Draft Day", new DraftDayView());
 		navigator.addView(LoginView.NAME, new LoginView());
+		navigator.addView(AdminView.NAME, new AdminView());
 		//cheatSheetView.setTableEditing(false);
 		navigator.addViewChangeListener(new ViewChangeListener() {
 

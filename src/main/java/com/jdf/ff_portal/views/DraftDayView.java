@@ -9,7 +9,6 @@ import com.jdf.ff_portal.backend.SbfDraftService;
 import com.jdf.ff_portal.backend.SbfTeamService;
 import com.jdf.ff_portal.backend.data.Player;
 import com.jdf.ff_portal.backend.data.SbfDraftRecord;
-import com.jdf.ff_portal.backend.data.SbfTeam;
 import com.jdf.ff_portal.utils.LeagueInfoManager;
 import com.vaadin.data.provider.ListDataProvider;
 import com.vaadin.navigator.View;
@@ -31,17 +30,12 @@ import com.vaadin.ui.themes.ValoTheme;
 
 @SuppressWarnings("serial")
 public class DraftDayView extends HorizontalLayout implements View {
-	//private FantasyLeague SBF;
 	private Label onTheClock =  new Label();
-	//private int currentRound = 1;
-	//private HashMap<Integer, FantasyTeam> draftOrder = new HashMap<Integer, FantasyTeam>();
 	private Grid<Player> availableGrid;
 	private Grid<SbfDraftRecord> draftedGrid;
 	private ListDataProvider<Player> playersDataProvider;
 	private ListDataProvider<SbfDraftRecord> draftedPlayersDataProvider;
 	List<Player> playerList;
-	//private LeagueInfoManager leagueInfoManager;
-
 	private String availPlayerNameFilterValue="";
 	private String availPositionFilterValue="";
 	private String availIsDraftedFilterValue="Available";
@@ -70,7 +64,12 @@ public class DraftDayView extends HorizontalLayout implements View {
 		}
 
 		public void enter(ViewChangeEvent event) {
-			if (!viewBuilt) buildView();
+			if (!viewBuilt) {
+				buildView();
+				viewBuilt=true;
+			}
+			playersDataProvider.refreshAll();
+			draftedPlayersDataProvider.refreshAll();
 		}
 
 		protected void buildView(){
@@ -138,7 +137,7 @@ public class DraftDayView extends HorizontalLayout implements View {
 
 			availableGrid.setSizeFull();
 			availableGrid.setSelectionMode(SelectionMode.SINGLE);
-			availableGrid.addColumn(p->p.getSbfRank().getRank()).setCaption("My Rank");
+			availableGrid.addColumn(p->PlayerService.getInstance().getSbfRankById(p.getPlayerId()).getRank()).setCaption("My Rank");
 			availableGrid.addColumn(Player::getPosition).setCaption("Position").setId("PositionColumn");
 			availableGrid.addColumn(Player::getDisplayName).setCaption("Name").setId("PlayerNameColumn");
 			availableGrid.addColumn(Player::getTeam).setCaption("Team");

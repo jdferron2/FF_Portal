@@ -2,6 +2,9 @@ package com.jdf.ff_portal.backend.data;
 
 import java.sql.Date;
 
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
+
 public class Player {
 	private int playerId;
 	private int active;
@@ -15,12 +18,9 @@ public class Player {
 	private int weight;
 	private Date dob;
 	private int proRank;
-	private SbfRank sbfRank;
+	//private SbfRank sbfRank;
+	private String dobString;
 
-	//	private String owner;
-	private int currentRank;
-	private int startingRank;
-//	private int draftedSlot;
 	
 	public Player() {}
 	public Player(int playerId, int jersey, String lname, String fname, String displayName, String team, 
@@ -36,9 +36,11 @@ public class Player {
 		this.weight = weight;
 		this.dob = dob;
 		this.proRank = proRank;
+		this.dobString = dob.toString();
 
 	}
 	
+	@XmlAttribute (name="active")
 	public int getActive() {
 		return active;
 	}
@@ -47,6 +49,7 @@ public class Player {
 		this.active = active;
 	}
 	
+	@XmlAttribute (name="jersey")
 	public int getJersey() {
 		return jersey;
 	}
@@ -55,6 +58,7 @@ public class Player {
 		this.jersey = jersey;
 	}
 	
+	@XmlAttribute  (name="lname")
 	public String getLname() {
 		return lname;
 	}
@@ -63,6 +67,7 @@ public class Player {
 		this.lname = lname;
 	}
 	
+	@XmlAttribute  (name="fname")
 	public String getFname() {
 		return fname;
 	}
@@ -71,6 +76,7 @@ public class Player {
 		this.fname = fname;
 	}
 	
+	@XmlAttribute  (name="displayName")
 	public String getDisplayName() {
 		return displayName;
 	}
@@ -79,6 +85,7 @@ public class Player {
 		this.displayName = displayName;
 	}
 	
+	@XmlAttribute  (name="team")
 	public String getTeam() {
 		return team;
 	}
@@ -86,6 +93,7 @@ public class Player {
 		this.team = team;
 	}
 	
+	@XmlAttribute  (name="position")
 	public String getPosition() {
 		return position;
 	}
@@ -94,6 +102,7 @@ public class Player {
 		this.position = position;
 	}
 
+	@XmlAttribute (name="height")
 	public String getHeight() {
 		return height;
 	}
@@ -102,6 +111,7 @@ public class Player {
 		this.height = height;
 	}
 	
+	@XmlAttribute (name="weight")
 	public int getWeight() {
 		return weight;
 	}
@@ -110,14 +120,30 @@ public class Player {
 		this.weight = weight;
 	}
 	
+	
 	public Date getDob() {
 		return dob;
 	}
 	
 	public void setDob(Date dob) {
 		this.dob = dob;
+		dobString=dob.toString();
 	}
 	
+	@XmlAttribute (name="dob")
+	public String getDobString(){
+		return dobString;
+	}
+	
+	public void setDobString(String dobString){
+		this.dobString =  dobString;
+		if (dobString == null || dobString.equals("") || dobString.equals("0000-00-00")){
+			dobString = "1900-01-01";
+		}
+		setDob(Date.valueOf(dobString));
+	}
+	
+	@XmlAttribute  (name="playerId")
 	public int getPlayerId() {
 		return playerId;
 	}
@@ -126,24 +152,7 @@ public class Player {
 		this.playerId = playerId;
 	}
 	
-//	public int getCurrentRank() {
-//		if (currentRank ==0){
-//			currentRank = startingRank;
-//		}
-//		return currentRank;
-//	}
-//
-//	public void setCurrentRank(int rank) {
-//		this.currentRank = rank;
-//	}
-	
-//	public int getStartingRank() {
-//		return startingRank;
-//	}
-//	public void setStartingRank(int startingRank) {
-//		this.startingRank = startingRank;
-//	}
-//	
+	@XmlAttribute  (name="proRank")
 	public int getProRank() {
 		return proRank;
 	}
@@ -151,29 +160,10 @@ public class Player {
 		this.proRank = proRank;
 	}
 	
-	public SbfRank getSbfRank() {
-		return sbfRank;
-	}
-	public void setSbfRank(SbfRank sbfRank) {
-		this.sbfRank = sbfRank;
-	}
-	
-//	public void setOwner(String owner){
-//		this.owner= owner;
+//	public SbfRank getSbfRank() {
+//		return sbfRank;
 //	}
-//	
-//	public String getOwner(){
-//		return owner;
-//	}
-	
-//	public int getDraftedSlot() {
-//		return draftedSlot;
-//	}
-//	public void setDraftedSlot(int draftedSlot) {
-//		this.draftedSlot = draftedSlot;
-//	}
-
-//	public int getSbfRankInt(){
-//		return getSbfRank().getRank();
+//	public void setSbfRank(SbfRank sbfRank) {
+//		this.sbfRank = sbfRank;
 //	}
 }

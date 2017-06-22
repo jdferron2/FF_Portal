@@ -64,4 +64,9 @@ public class SbfLeagueService {
 
 		return this.sbfLeagues;
 	}
+	
+	public synchronized SbfLeague getLeagueById(int id) {
+		return sbfLeagues.stream().filter(
+				l->l.getLeagueId()==id).findFirst().orElse(null);
+	}	
 }

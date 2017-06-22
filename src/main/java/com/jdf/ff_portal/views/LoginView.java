@@ -1,10 +1,18 @@
 package com.jdf.ff_portal.views;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
+import com.jdf.ff_portal.backend.PlayerService;
 import com.jdf.ff_portal.backend.SbfLeagueService;
 import com.jdf.ff_portal.backend.SbfTeamService;
+import com.jdf.ff_portal.backend.data.DraftRank;
+import com.jdf.ff_portal.backend.data.DraftRankings;
+import com.jdf.ff_portal.backend.data.Player;
+import com.jdf.ff_portal.backend.data.Players;
 import com.jdf.ff_portal.backend.data.SbfLeague;
+import com.jdf.ff_portal.backend.data.SbfRank;
+import com.jdf.ff_portal.utils.RestAPIUtils;
 import com.jdf.ff_portal.utils.SessionAttributes;
 import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener.ViewChangeEvent;
@@ -71,6 +79,7 @@ public class LoginView extends HorizontalLayout implements View  {
 	}
 	@Override
 	public void enter(ViewChangeEvent event) {
+
 	}
 
 
